@@ -211,22 +211,48 @@ async function searchGoogleTrends(topic) {
 
 // ============= MAIN RESEARCH ENDPOINT =============
 app.post('/api/research', async (req, res) => {
+  console.log('\n📍 POST /api/research endpoint HIT');
+  console.log('Topic received:', req.body.topic);
+  
   const { topic } = req.body;
 
   if (!topic) {
+    console.log('❌ No topic in request body');
     return res.status(400).json({ error: 'Topic is required' });
   }
 
   try {
-    console.log(`\nResearching topic: ${topic}`);
+    console.log(`\n🔍 Starting research for: ${topic}`);
 
     // Fetch all data with Promise.allSettled to handle failures gracefully
+    console.log('🟡 Starting parallel API calls...');
     const results = await Promise.allSettled([
-      searchYouTube(topic),
-      searchReddit(topic),
-      searchNewsAPI(topic),
-      searchGoogleTrends(topic)
+      (async () => {
+        console.log('  → YouTube API call starting...');
+        const result = await searchYouTube(topic);
+        console.log('  ✅ YouTube API call completed');
+        return result;
+      })(),
+      (async () => {
+        console.log('  → Reddit scrape starting...');
+        const result = await searchReddit(topic);
+        console.log('  ✅ Reddit scrape completed');
+        return result;
+      })(),
+      (async () => {
+        console.log('  → News API call starting...');
+        const result = await searchNewsAPI(topic);
+        console.log('  ✅ News API call completed');
+        return result;
+      })(),
+      (async () => {
+        console.log('  → Trends API call starting...');
+        const result = await searchGoogleTrends(topic);
+        console.log('  ✅ Trends API call completed');
+        return result;
+      })()
     ]);
+    console.log('🟢 All API calls completed');
 
     const [youtubeResult, redditResult, newsResult, trendsResult] = results;
 
@@ -286,9 +312,13 @@ app.post('/api/research', async (req, res) => {
       }
     };
 
+    console.log('📤 Sending response back to client');
+    console.log('Overall score:', response.overallScore);
     res.json(response);
   } catch (error) {
-    console.error('Research error:', error);
+    console.error('❌ Research error caught:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       error: 'Failed to complete research',
       message: error.message
