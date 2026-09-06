@@ -16,6 +16,9 @@ app.use(cors({
 
 app.use(express.json());
 
+// Handle preflight requests explicitly
+app.options('*', cors());
+
 // ============= API KEYS (from .env file) =============
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
