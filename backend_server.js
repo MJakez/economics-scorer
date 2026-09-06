@@ -217,13 +217,20 @@ app.post('/api/research', async (req, res) => {
   try {
     console.log(`\nResearching topic: ${topic}`);
 
-    // Fetch all data in parallel
-    const [youtubeData, redditData, newsData, trendsData] = await Promise.all([
+    // Fetch all data with Promise.allSettled to handle failures gracefully
+    const results = await Promise.allSettled([
       searchYouTube(topic),
       searchReddit(topic),
       searchNewsAPI(topic),
       searchGoogleTrends(topic)
     ]);
+
+    const [youtubeResult, redditResult, newsResult, trendsResult] = results;
+
+    const youtubeData = youtubeResult.status === 'fulfilled' ? youtubeResult.value : { trendScore: 0, insight: 'YouTube data unavailable', youtube_interest: 'Unable to fetch', videoCount: 0, averageViews: 0 };
+    const redditData = redditResult.status === 'fulfilled' ? redditResult.value : { trendScore: 0, insight: 'Reddit data unavailable', reddit_insight: 'Unable to fetch', postsFound: 0, totalComments: 0 };
+    const newsData = newsResult.status === 'fulfilled' ? newsResult.value : { trendScore: 0, insight: 'News data unavailable', news_insight: 'Unable to fetch', articleCount: 0 };
+    const trendsData = trendsResult.status === 'fulfilled' ? trendsResult.value : { trendScore: 50, insight: 'Estimated trend score', trend_insight: 'Unable to fetch real data' };
 
     // Calculate overall score
     const overallScore = Math.round(
@@ -250,20 +257,24 @@ app.post('/api/research', async (req, res) => {
       `${topic} vs alternatives`
     ];
 
+    // Create mock topics since we don't have detailed data structure
+    const topTopics = [
+      {
+        title: `Current Trends in ${topic}`,
+        description: youtubeData.insight,
+        virality_score: overallScore,
+        youtube_interest: youtubeData.insight,
+        reddit_insight: redditData.insight,
+        news_insight: newsData.insight,
+        trend_insight: trendsData.insight,
+        why_it_wins: recommendations[0] || 'Growing interest in this area'
+      }
+    ];
+
     const response = {
       topic,
-      youtubeScore: youtubeData.trendScore,
-      youtubeInsight: youtubeData.insight,
-      redditScore: redditData.trendScore,
-      redditInsight: redditData.insight,
-      newsScore: newsData.trendScore,
-      newsInsight: newsData.insight,
-      trendScore: trendsData.trendScore,
-      trendInsight: trendsData.insight,
-      overallScore,
-      reasoning: `Based on ${youtubeData.videoCount} YouTube videos, ${redditData.postsFound} Reddit posts, ${newsData.articleCount} news articles, and Google Trends data.`,
-      recommendations,
-      subtopics,
+      topTopics,
+      recommendation: `Based on current data, ${topic} shows ${overallScore >= 70 ? 'strong' : overallScore >= 50 ? 'moderate' : 'emerging'} interest. ${recommendations[0]}`,
       rawData: {
         youtube: youtubeData,
         reddit: redditData,
@@ -275,7 +286,10 @@ app.post('/api/research', async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('Research error:', error);
-    res.status(500).json({ error: 'Failed to complete research' });
+    res.status(500).json({ 
+      error: 'Failed to complete research',
+      message: error.message
+    });
   }
 });
 
@@ -286,8 +300,27 @@ app.get('/api/health', (req, res) => {
 
 // ============= START SERVER =============
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+
+const server = app.listen(PORT, () => {
   console.log(`\n🚀 Economics Topic Scorer Backend running on http://localhost:${PORT}`);
   console.log(`📊 POST /api/research - Research a topic`);
   console.log(`❤️  GET /api/health - Check server status\n`);
+});
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
