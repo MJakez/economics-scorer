@@ -5,7 +5,15 @@ const { google } = require('googleapis');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+
+// Enable CORS with explicit configuration
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+}));
+
 app.use(express.json());
 
 // ============= API KEYS (from .env file) =============
