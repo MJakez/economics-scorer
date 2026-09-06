@@ -301,6 +301,86 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Economics Topic Scorer Backend is running' });
 });
 
+// ============= API TEST ENDPOINT =============
+app.get('/api/test', async (req, res) => {
+  console.log('\n🧪 Testing all APIs...');
+  
+  const results = {
+    timestamp: new Date().toISOString(),
+    tests: {}
+  };
+
+  // Test YouTube
+  try {
+    console.log('Testing YouTube API...');
+    const youtubeTest = await searchYouTube('test');
+    results.tests.youtube = {
+      status: 'success',
+      data: youtubeTest
+    };
+    console.log('✅ YouTube API works');
+  } catch (error) {
+    results.tests.youtube = {
+      status: 'failed',
+      error: error.message
+    };
+    console.log('❌ YouTube API failed:', error.message);
+  }
+
+  // Test Reddit
+  try {
+    console.log('Testing Reddit scraping...');
+    const redditTest = await searchReddit('test');
+    results.tests.reddit = {
+      status: 'success',
+      data: redditTest
+    };
+    console.log('✅ Reddit scraping works');
+  } catch (error) {
+    results.tests.reddit = {
+      status: 'failed',
+      error: error.message
+    };
+    console.log('❌ Reddit scraping failed:', error.message);
+  }
+
+  // Test News API
+  try {
+    console.log('Testing News API...');
+    const newsTest = await searchNewsAPI('test');
+    results.tests.news = {
+      status: 'success',
+      data: newsTest
+    };
+    console.log('✅ News API works');
+  } catch (error) {
+    results.tests.news = {
+      status: 'failed',
+      error: error.message
+    };
+    console.log('❌ News API failed:', error.message);
+  }
+
+  // Test Google Trends
+  try {
+    console.log('Testing Google Trends...');
+    const trendsTest = await searchGoogleTrends('test');
+    results.tests.trends = {
+      status: 'success',
+      data: trendsTest
+    };
+    console.log('✅ Google Trends works');
+  } catch (error) {
+    results.tests.trends = {
+      status: 'failed',
+      error: error.message
+    };
+    console.log('❌ Google Trends failed:', error.message);
+  }
+
+  res.json(results);
+});
+
 // ============= START SERVER =============
 const PORT = process.env.PORT || 3001;
 
